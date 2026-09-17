@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/awdl.schema.json",
+  "title": "Agent Workflow Description Language",
+  "type": "object",
+  "required": ["language", "version", "workflow", "initial", "states", "terminal", "transitions", "progress", "rules"],
+  "properties": {
+    "language": { "const": "AWDL" },
+    "version": { "type": "string" },
+    "workflow": { "type": "string", "minLength": 1 },
+    "initial": { "type": "string" },
+    "states": { "type": "array", "minItems": 2, "uniqueItems": true, "items": { "type": "string" } },
+    "terminal": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string" } },
+    "transitions": {
+      "type": "object",
+      "additionalProperties": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }
+    },
+    "progress": {
+      "type": "object",
+      "required": ["terminal_success", "novel_successful_action", "repeated_action_is_progress", "message_is_progress"],
+      "additionalProperties": { "type": "boolean" }
+    },
+    "rules": {
+      "type": "object",
+      "required": ["max_events", "max_consecutive_errors", "max_same_action", "repeat_window", "no_progress_window", "cycle_min_period", "cycle_max_period", "cycle_repetitions", "silent_timeout_ms"],
+      "additionalProperties": { "type": "integer", "minimum": 1 }
+    }
+  },
+  "additionalProperties": false
+}

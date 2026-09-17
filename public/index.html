@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Codex 工作流监视器</title>
+  <link rel="stylesheet" href="/monitor.css">
+  <link rel="stylesheet" href="/tasks.css">
+  <link rel="stylesheet" href="/layout-fixes.css">
+  <style>
+    dialog{width:min(520px,calc(100% - 32px));border:1px solid #ff5367;border-radius:14px;background:#101a2a;color:#e8f0fa;padding:0;box-shadow:0 24px 80px #000b}dialog::backdrop{background:#020711bb;backdrop-filter:blur(4px)}.alert-dialog-body{padding:22px}.alert-dialog-body h2{margin:0 0 9px;color:#ff9aa6}.alert-dialog-body p{color:#c4d1e1;line-height:1.55}.alert-evidence{padding:10px;border-radius:8px;background:#261522;color:#e8bdc3;font:11px/1.5 ui-monospace,Consolas;white-space:pre-wrap}.dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}.dialog-actions .terminate{border-color:#ff5367;background:#b7293d;color:#fff;font-weight:800}
+  </style>
+</head>
+<body>
+  <header><div><div class="eyebrow">AWDL RUNTIME MONITOR</div><h1>Codex 工作流监视器</h1></div><div class="connection"><span id="dot" class="dot"></span><span id="statusText">正在连接</span><span id="appVersion" class="mode">v…</span><span id="runtimeMode" class="mode">Web</span></div></header>
+  <div class="layout">
+    <aside>
+      <label>Codex Desktop 常驻旁路监听</label>
+      <div class="actions"><button id="listenStart">开始监听</button><button id="listenStop" disabled>停止监听</button></div>
+      <div id="listenRoot" class="notice">正在读取 Codex 会话目录……</div>
+      <div id="codexLocation" class="notice">正在自动检索 Codex 安装位置……</div>
+      <label>形式化检测验证</label><div class="actions demo-actions" style="grid-template-columns:1fr 1fr;margin-top:7px"><button data-demo="livelock">演示周期活锁</button><button data-demo="retry-loop">演示重复死循环</button></div>
+      <section class="simulation-panel">
+        <label>4.0 真实 Agent 协同演练</label>
+        <div id="desktopCurrent" class="notice">正在识别 Codex 当前窗口……</div>
+        <div class="actions simulation-actions"><button data-simulation="livelock">触发规划活锁</button><button data-simulation="retry-loop">触发重复重试</button></div>
+        <div id="simulationState" class="simulation-state">请先在右侧选择一个任务</div>
+      </section>
+      <div class="metrics"><div><span>当前状态</span><strong id="currentPhase">IDLE</strong></div><div><span>事件</span><strong id="eventCount">0</strong></div><div><span>告警</span><strong id="alertCount">0</strong></div><div><span>监听</span><strong id="sessionState">未启动</strong></div></div>
+    </aside>
+    <main>
+      <section class="task-strip" aria-labelledby="taskStripTitle">
+        <div class="task-strip-heading"><div><h2 id="taskStripTitle">对话窗口</h2></div><span id="taskCapacity" class="mode">0 / 5</span></div>
+        <div id="taskCards" class="task-cards empty-state">等待 Codex 对话内容</div>
+      </section>
+      <nav class="tabs" aria-label="分析视图"><button class="tab active" data-view="workflow">工作流图</button><button class="tab" data-view="logic">逻辑层</button><button class="tab" data-view="awdl">AWDL 分析</button><button class="tab" data-view="communication">通信流</button><button class="tab" data-view="events">原始事件</button></nav>
+      <section id="workflow" class="view active"><div class="view-heading"><div><h2>实时状态推进</h2></div><button class="clear-view">清空当前任务</button></div><div id="workflowAlert" class="alarm" hidden></div><div id="workflowCanvas" class="graph empty-state">等待任务事件</div></section>
+      <section id="logic" class="view" hidden><div class="view-heading"><div><h2>逻辑层</h2><div class="view-context" data-view-context></div></div></div><div id="logicStats" class="analysis-summary"></div><div class="logic-grid"><div class="logic-pipeline"><div>原始事件</div><b>→</b><div>分类器</div><b>→</b><div>状态迁移</div><b>→</b><div>进展判定</div></div><div id="logicFeed" class="logic-feed empty-state">尚无逻辑层事件</div></div></section>
+      <section id="awdl" class="view" hidden><div class="view-heading"><div><h2>AWDL 形式化分析</h2><div class="view-context" data-view-context></div></div></div><div id="awdlStats" class="analysis-summary"></div><div class="awdl-layout"><div><h3>当前规范</h3><div id="specSummary" class="spec-grid">正在加载……</div><h3>合法迁移</h3><div id="transitionMap" class="transition-map"></div></div><div><h3>规则告警</h3><div id="alertFeed" class="alert-feed empty-state">尚未触发规则</div></div></div></section>
+      <section id="communication" class="view" hidden><div class="view-heading"><div><h2>通信流</h2><div class="view-context" data-view-context></div></div></div><div id="communicationStats" class="analysis-summary"></div><div id="sequence" class="sequence empty-state">等待通信事件</div></section>
+      <section id="events" class="view" hidden><div class="view-heading"><div><h2>原始事件</h2><div class="view-context" data-view-context></div></div><button class="clear-view">清空当前任务</button></div><div id="eventStats" class="analysis-summary"></div><div class="filters"><button class="filter active" data-filter="reasoning">推理摘要 <span data-count="reasoning">0</span></button><button class="filter" data-filter="tool">工具 <span data-count="tool">0</span></button><button class="filter" data-filter="message">对话 <span data-count="message">0</span></button><button class="filter" data-filter="error">异常 <span data-count="error">0</span></button><button class="filter" data-filter="alert">告警 <span data-count="alert">0</span></button></div><div id="timeline" class="timeline empty-state">暂无事件</div></section>
+    </main>
+  </div>
+  <dialog id="terminationDialog" aria-labelledby="terminationTitle"><div class="alert-dialog-body"><h2 id="terminationTitle">检测到 Agent 工作流异常</h2><p id="terminationMessage"></p><div id="terminationEvidence" class="alert-evidence"></div><div class="dialog-actions"><button id="continueAgent">继续观察</button><button id="terminateAgent" class="terminate">终止 Agent</button></div></div></dialog>
+  <script src="/workflow-layout.js"></script>
+  <script src="/monitor.js"></script>
+</body>
+</html>

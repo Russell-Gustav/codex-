@@ -1,0 +1,52 @@
+{
+  "$schema": "./awdl.schema.json",
+  "language": "AWDL",
+  "version": "0.1",
+  "workflow": "codex-general-task",
+  "initial": "STARTING",
+  "states": [
+    "STARTING",
+    "STARTED",
+    "REASONING_SUMMARY",
+    "RESPONDING",
+    "TOOL_CALLING",
+    "OBSERVING",
+    "RUNNING",
+    "COMPLETED",
+    "FAILED",
+    "STOPPED"
+  ],
+  "terminal": ["COMPLETED", "FAILED", "STOPPED"],
+  "transitions": {
+    "STARTING": ["STARTED", "RUNNING", "FAILED", "STOPPED"],
+    "STARTED": ["STARTED", "REASONING_SUMMARY", "RESPONDING", "TOOL_CALLING", "RUNNING", "FAILED", "STOPPED"],
+    "REASONING_SUMMARY": ["REASONING_SUMMARY", "RESPONDING", "TOOL_CALLING", "RUNNING", "FAILED", "STOPPED"],
+    "RESPONDING": ["RESPONDING", "REASONING_SUMMARY", "TOOL_CALLING", "RUNNING", "COMPLETED", "FAILED", "STOPPED"],
+    "TOOL_CALLING": ["TOOL_CALLING", "OBSERVING", "RESPONDING", "RUNNING", "FAILED", "STOPPED"],
+    "OBSERVING": ["OBSERVING", "REASONING_SUMMARY", "RESPONDING", "TOOL_CALLING", "RUNNING", "COMPLETED", "FAILED", "STOPPED"],
+    "RUNNING": ["RUNNING", "STARTED", "REASONING_SUMMARY", "RESPONDING", "TOOL_CALLING", "OBSERVING", "COMPLETED", "FAILED", "STOPPED"]
+  },
+  "progress": {
+    "terminal_success": true,
+    "novel_successful_action": true,
+    "repeated_action_is_progress": false,
+    "message_is_progress": false
+  },
+  "rules": {
+    "max_events": 120,
+    "max_consecutive_errors": 3,
+    "max_same_action": 3,
+    "repeat_window": 8,
+    "repeat_min_duration_ms": 60000,
+    "no_progress_window": 8,
+    "no_progress_min_duration_ms": 180000,
+    "planning_churn_window": 6,
+    "planning_churn_messages": 4,
+    "planning_churn_min_duration_ms": 180000,
+    "cycle_min_period": 2,
+    "cycle_max_period": 4,
+    "cycle_repetitions": 2,
+    "cycle_min_duration_ms": 60000,
+    "silent_timeout_ms": 300000
+  }
+}

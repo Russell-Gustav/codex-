@@ -1,0 +1,23 @@
+{
+  "name": "codex-thought-monitor",
+  "version": "4.0.1",
+  "private": true,
+  "description": "Real-time visual monitor for observable Codex CLI events",
+  "scripts": {
+    "start": "node launchers/web.js",
+    "web": "node launchers/web.js",
+    "web:server": "node server.js",
+    "desktop": "node launchers/desktop.js",
+    "launcher": "node standalone.js",
+    "build:portable": "node scripts/build-portable.js",
+    "test": "node --test",
+    "analyze": "node tools/analyze-log.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.10",
+    "postject": "^1.0.0-alpha.6"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Codex Monitor 启动中心</title>
+  <style>
+    :root { color-scheme:dark; --bg:#07111f; --panel:#101e31; --line:#2b3d56; --text:#eaf2fc; --muted:#91a4bd; --cyan:#38d6d1; --violet:#a98bff; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; font-family:Inter,"Microsoft YaHei",system-ui,sans-serif; color:var(--text); background:radial-gradient(circle at 20% 0%,#19345a 0,var(--bg) 48%); }
+    .shell { width:min(880px,calc(100% - 36px)); }
+    .brand { margin-bottom:22px; }
+    .eyebrow { color:var(--cyan); font:700 12px ui-monospace,Consolas,monospace; letter-spacing:.16em; }
+    h1 { margin:8px 0 8px; font-size:34px; }
+    .subtitle { color:var(--muted); line-height:1.6; }
+    .status { display:flex; gap:10px; align-items:center; margin:18px 0 24px; padding:12px 14px; border:1px solid var(--line); border-radius:11px; background:#0a1728aa; }
+    .dot { width:10px; height:10px; border-radius:50%; background:#ffb45e; box-shadow:0 0 14px currentColor; }
+    .dot.ok { color:#62dfa0; background:#62dfa0; }
+    .modes { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .card { border:1px solid var(--line); border-radius:16px; padding:23px; background:linear-gradient(145deg,#12243aee,#0b1727ee); box-shadow:0 18px 50px #0004; }
+    .icon { font-size:27px; }
+    h2 { margin:14px 0 8px; font-size:20px; }
+    .card p { color:var(--muted); min-height:50px; line-height:1.55; font-size:13px; }
+    button { width:100%; margin-top:12px; padding:12px 14px; border:0; border-radius:10px; cursor:pointer; font-weight:800; color:#05111c; background:linear-gradient(120deg,var(--cyan),#59a7ff); }
+    .desktop button { background:linear-gradient(120deg,var(--violet),#6eafff); }
+    button:disabled { opacity:.5; cursor:wait; }
+    .foot { color:#6f849f; margin-top:18px; font-size:11px; text-align:center; }
+    .quit { width:auto; display:block; margin:14px auto 0; padding:8px 16px; color:var(--muted); background:transparent; border:1px solid var(--line); }
+    @media(max-width:680px){ .modes{grid-template-columns:1fr}.card p{min-height:0}h1{font-size:27px} }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="brand">
+      <div class="eyebrow">AWDL RUNTIME MONITOR</div>
+      <h1>Codex工作流监视器</h1>
+      <div class="subtitle">网页模式会打开普通浏览器窗口；程序模式会打开无地址栏的独立应用窗口。</div>
+    </div>
+    <div class="status"><span id="dot" class="dot"></span><span id="status">正在检查监控核心……</span></div>
+    <div class="modes">
+      <section class="card web">
+        <div class="icon">◎</div><h2>网页模式</h2>
+        <p>在普通 Edge 浏览器窗口中运行，可使用地址栏、标签页及浏览器刷新等功能。</p>
+        <button data-mode="web">使用网页模式</button>
+      </section>
+      <section class="card desktop">
+        <div class="icon">▣</div><h2>程序模式</h2>
+        <p>在独立应用窗口中运行，隐藏地址栏和标签页；再次启动时会自动接管并更新监控服务。</p>
+        <button data-mode="desktop">使用程序模式</button>
+      </section>
+    </div>
+    <button id="quit" class="quit">退出监视器</button>
+    <div class="foot">选择后将打开对应窗口并关闭启动中心；需要完全退出时使用上方按钮。</div>
+  </div>
+  <script>
+    const statusText = document.querySelector("#status");
+    const dot = document.querySelector("#dot");
+    const modeButtons = [...document.querySelectorAll("button[data-mode]")];
+    modeButtons.forEach((button) => { button.disabled = true; });
+
+    async function loadStatus() {
+      let lastError;
+      for (let attempt = 0; attempt < 8; attempt += 1) {
+        try {
+          const response = await fetch("/api/status", { cache:"no-store" });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return await response.json();
+        } catch (error) {
+          lastError = error;
+          statusText.textContent = `正在连接监控核心（${attempt + 1}/8）……`;
+          await new Promise((resolve) => setTimeout(resolve, Math.min(250 * 2 ** attempt, 2000)));
+        }
+      }
+      throw lastError;
+    }
+
+    loadStatus().then((status) => {
+      dot.classList.add("ok");
+      modeButtons.forEach((button) => { button.disabled = false; });
+      statusText.textContent = `监控核心 v${status.version || "未知"} 已就绪 · ${status.workflow} · AWDL ${status.awdlVersion}`;
+    }).catch(() => statusText.textContent = "监控核心启动失败，请重新运行程序");
+
+    document.querySelectorAll("button[data-mode]").forEach((button) => button.addEventListener("click", async () => {
+      button.disabled = true;
+      const mode = button.dataset.mode;
+      statusText.textContent = `正在打开${mode === "web" ? "网页" : "程序"}模式……`;
+      try {
+        const response = await fetch("/api/open-view", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ mode }) });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+        statusText.textContent = mode === "web" ? "已在普通浏览器窗口中打开" : "已在独立应用窗口中打开";
+        setTimeout(() => window.close(), 250);
+      } catch (error) {
+        button.disabled = false;
+        statusText.textContent = `打开失败：${error.message}`;
+      }
+    }));
+    document.querySelector("#quit").addEventListener("click", async () => {
+      statusText.textContent = "正在关闭监控服务……";
+      await fetch("/api/shutdown", { method:"POST" });
+      window.close();
+    });
+  </script>
+</body>
+</html>

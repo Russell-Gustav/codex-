@@ -1,0 +1,80 @@
+html, body { max-width: 100%; overflow-x: hidden; }
+header, .layout, aside, main, .view, .view-heading > div { min-width: 0; }
+button, .notice, .alarm, .alert-item, .alert-item p, .alert-item small,
+.logic-item > span, .transition-map div, .spec-grid strong, details pre {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+aside { overflow: hidden; }
+.actions { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.metrics div, .spec-grid div, .event > div, .logic-item > span { min-width: 0; }
+.notice { max-width: 100%; }
+.simulation-panel { margin-top: 14px; padding: 12px; border: 1px solid #3b506b; border-radius: 10px; background: #0d1b2d; }
+.simulation-panel label { margin-top: 0; color: var(--cyan); }
+.simulation-panel .notice { margin: 6px 0 10px; }
+.simulation-actions { margin-top: 0; }
+.simulation-state { margin-top: 9px; color: var(--muted); font: 10px/1.45 ui-monospace, Consolas; overflow-wrap: anywhere; white-space: pre-wrap; }
+.simulation-state.active { color: var(--orange); }
+.simulation-state.failed { color: var(--red); }
+
+.task-cards { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.task-card { width: 100%; overflow: hidden; }
+.task-card-head { min-width: 0; }
+.task-status { max-width: 58%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.view-heading { flex-wrap: wrap; }
+.clear-view { white-space: nowrap; }
+.view-heading p { max-width: 72ch; line-height: 1.55; }
+.view-context { margin-top: 6px; color: var(--muted); font: 11px/1.45 ui-monospace, Consolas; }
+.analysis-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.analysis-summary > div { min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); }
+.analysis-summary span { display: block; color: var(--muted); font-size: 10px; }
+.analysis-summary strong { display: block; margin-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 13px ui-monospace, Consolas; }
+.analysis-summary .danger { color: var(--red); }
+.analysis-summary .healthy { color: var(--green); }
+.logic-item { grid-template-columns: minmax(90px, .7fr) minmax(120px, 1fr) minmax(0, 3fr); }
+.spec-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.alert-item { max-width: 100%; }
+.alert-item small { display: block; }
+.event { grid-template-columns: minmax(76px, .7fr) minmax(100px, 1fr) minmax(0, 5fr); }
+.event h3 { overflow-wrap: anywhere; }
+.detail { width: 100%; }
+details { max-width: 100%; }
+details pre { max-height: 320px; overflow: auto; }
+
+.graph {
+  height: 630px;
+  min-height: 630px;
+  max-height: 630px;
+  overflow: auto;
+  scrollbar-gutter: stable both-edges;
+  overscroll-behavior: contain;
+}
+.graph.empty-state { height: 630px; min-height: 630px; }
+.graph::-webkit-scrollbar, .detail::-webkit-scrollbar, details pre::-webkit-scrollbar { width: 10px; height: 10px; }
+.graph::-webkit-scrollbar-track, .detail::-webkit-scrollbar-track, details pre::-webkit-scrollbar-track { background: #081422; }
+.graph::-webkit-scrollbar-thumb, .detail::-webkit-scrollbar-thumb, details pre::-webkit-scrollbar-thumb { background: #36506d; border: 2px solid #081422; border-radius: 999px; }
+.graph::-webkit-scrollbar-thumb:hover { background: var(--cyan); }
+
+@media (max-width: 1100px) {
+  .task-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .spec-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .task-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .graph { height: 630px; min-height: 630px; max-height: 630px; }
+  .event, .logic-item { grid-template-columns: 1fr; }
+  .analysis-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  header { gap: 12px; padding: 12px 14px; }
+  h1 { font-size: 18px; }
+  .task-cards, .spec-grid { grid-template-columns: 1fr; }
+  .analysis-summary { grid-template-columns: 1fr; }
+  .tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tab { width: 100%; }
+  .filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .filter { width: 100%; }
+}

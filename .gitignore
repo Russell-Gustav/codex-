@@ -1,0 +1,6 @@
+desktop/.edge-profile/
+.runtime/
+build/
+node_modules/
+CodexMonitor.exe
+*.zip
