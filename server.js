@@ -273,6 +273,10 @@ function finishTurn(phase) {
   if (!activeRun) return;
   const run = activeRun;
   clearInterval(run.clock);
+  // The passive session event that ends the turn is sourced from codex-session.
+  // Publish an explicit monitor lifecycle event so the UI can release its
+  // simulation controls for completed, failed, and interrupted turns alike.
+  broadcast({ category:"lifecycle", phase, title:"真实协同演练已结束", detail:`运行 ${run.runId} 已结束：${phase}`, source:"monitor", runId:run.runId, threadId:run.threadId, turnId:run.turnId });
   run.logStream?.end();
   if (activeSession) activeSession.turnId = null;
   activeRun = null;

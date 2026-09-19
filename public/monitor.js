@@ -177,12 +177,18 @@ function workflowSteps() {
 function renderWorkflow() {
   const host = $("#workflowCanvas");
   const events = workflowSteps();
+  const alerts = selectedAlerts();
+  const verdict = $("#workflowVerdict");
+  verdict.className = `workflow-verdict ${alerts.length ? "warn" : "clear"}`;
+  verdict.textContent = alerts.length
+    ? `已触发 ${alerts.length} 条规则告警；红色节点是告警引用的证据，请在“AWDL 分析”查看规则和事件编号。`
+    : events.length ? "目前未触发 AWDL 规则。图中重复的状态尚不足以判错；仍需结合动作内容、结果和持续时间。" : "等待事件后显示本次运行的判定。";
   if (!events.length) { host.className = "graph empty-state"; host.textContent = "等待任务事件"; return; }
-  host.className = `graph${selectedAlerts().length ? " danger" : ""}`;
+  host.className = `graph${alerts.length ? " danger" : ""}`;
   const layout = WorkflowLayout.createWorkflowLayout(events.length);
   const { positions, width, height } = layout;
   const eventIds = new Set(events.map((event) => event.id));
-  const scopedAlerts = selectedAlerts().filter((alert) => (alert.detection?.evidence_event_ids || []).some((id) => eventIds.has(id)));
+  const scopedAlerts = alerts.filter((alert) => (alert.detection?.evidence_event_ids || []).some((id) => eventIds.has(id)));
   const evidence = new Set(scopedAlerts.flatMap((alert) => alert.detection?.evidence_event_ids || []));
   let paths = "";
   for (let i = 1; i < positions.length; i += 1) {
@@ -203,12 +209,36 @@ function renderWorkflow() {
     }
   }
   const nodes = events.map((event, index) => {
-    const p = positions[index], classes = ["node", index === events.length - 1 ? "current" : "", evidence.has(event.id) ? "loop" : ""].join(" ");
-    return `<g class="${classes}" transform="translate(${p.x - 55} ${p.y - 28})"><rect width="110" height="56" rx="9"/><text x="55" y="22" text-anchor="middle">${escapeHtml(event.phase || "EVENT")}</text><text class="sub" x="55" y="40" text-anchor="middle">#${event.windowStep} · ${escapeHtml(event.category)}</text></g>`;
+    const p = positions[index], classes = ["node", index === events.length - 1 ? "current" : "", evidence.has(event.id) ? "loop" : "", isProgress(event) ? "progress" : ""].join(" ");
+    const shortLabel = event.phase === "TOOL_CALLING" ? "调用" : event.phase === "OBSERVING" ? "返回" : event.phase === "COMPLETED" ? "完成" : "";
+    return `<g class="${classes}" transform="translate(${p.x - 55} ${p.y - 28})"><title>${escapeHtml(`#${event.windowStep} ${event.title || event.phase}: ${event.detail || ""}`)}</title><rect width="110" height="56" rx="9"/><text x="55" y="22" text-anchor="middle">${escapeHtml(event.phase || "EVENT")}</text><text class="sub" x="55" y="40" text-anchor="middle">#${event.windowStep} · ${escapeHtml(shortLabel || event.category)}</text></g>`;
   }).join("");
   host.innerHTML = `<svg style="height:${height}px" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Agent 工作流状态图，共 ${layout.rows} 行，每行最多 6 个状态"><defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#59728f"/></marker><marker id="loopArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#ff5367"/></marker></defs>${paths}${nodes}</svg>`;
   host.scrollLeft = 0;
   requestAnimationFrame(() => { host.scrollTop = Math.max(0, host.scrollHeight - host.clientHeight); });
+}
+
+function renderRules() {
+  const spec = state.spec;
+  if (!spec) return;
+  const r = spec.rules;
+  const alerts = selectedAlerts();
+  const rows = [
+    ["RETRY_STORM", "重复重试", `最近 ${r.repeat_window} 次工具调用中，同一动作至少 ${r.max_same_action} 次；真实监听还需持续 ${r.repeat_min_duration_ms / 1000} 秒，且重复调用没有新进展。`],
+    ["PERIODIC_LIVELOCK", "周期活锁", `相同的 ${r.cycle_min_period}～${r.cycle_max_period} 步事件片段连续出现 ${r.cycle_repetitions} 次，片段内无进展；真实监听至少持续 ${r.cycle_min_duration_ms / 1000} 秒。`],
+    ["NO_PROGRESS", "长期无进展", `最近 ${r.no_progress_window} 个事件至少跨越 ${r.no_progress_min_duration_ms / 1000} 秒，没有新进展，并反复执行同一工具动作。`],
+    ["ERROR_STORM", "连续错误", `连续 ${r.max_consecutive_errors} 个错误事件。中间出现非错误事件就重新计数。`],
+    ["PLANNING_CHURN", "规划空转", `最近 ${r.planning_churn_window} 个事件中至少 ${r.planning_churn_messages} 个相同的规划或说明事件，没有工具或进展，持续至少 ${r.planning_churn_min_duration_ms / 1000} 秒。`],
+    ["SILENT_STALL", "静默停滞", `未结束时超过 ${r.silent_timeout_ms / 1000} 秒没有新事件；这只表示可能在等待或挂起。`],
+    ["EVENT_BUDGET_EXCEEDED", "事件超预算", `事件超过 ${r.max_events} 个，同时最近 ${r.no_progress_window} 个事件持续没有可验证进展。`],
+    ["INVALID_TRANSITION", "非法状态迁移", "下一状态不在规范允许列表中。会话文件旁路监听可能缺少中间事件，因此不使用此项判错。"],
+  ];
+  $("#rulesOverview").innerHTML = `<p><strong>如何区分：</strong>正常工作流可以多次调用工具，只要出现新的成功动作或最终完成；错误工作流需要满足下列具体规则。工具返回、普通文字和推理阶段本身不能证明任务目标已经实现。</p><p><strong>当前对话：</strong>${alerts.length ? `已触发 ${alerts.length} 条告警；请按证据编号核对“原始事件”。` : "未触发规则；这表示目前证据不足，并非保证任务正确。"}</p>`;
+  $("#rulesCards").innerHTML = rows.map(([code, name, condition]) => {
+    const matching = alerts.filter((alert) => alert.detection?.code === code);
+    const evidence = [...new Set(matching.flatMap((alert) => alert.detection?.evidence_event_ids || []))];
+    return `<article class="rule-card ${matching.length ? "triggered" : ""}"><div class="rule-head"><h3>${escapeHtml(name)}</h3><span class="rule-status">${matching.length ? `已触发 ${matching.length} 次` : "未触发"}</span></div><code>${escapeHtml(code)}</code><p>${escapeHtml(condition)}</p>${evidence.length ? `<small>证据事件：${evidence.map((id) => `#${escapeHtml(id)}`).join("、")}</small>` : ""}</article>`;
+  }).join("");
 }
 
 function renderLogic() {
@@ -306,7 +336,7 @@ function renderTimeline() {
 
 function renderAll() {
   state.renderTimer = null;
-  renderTasks(); renderAnalysisContext(); renderWorkflow(); renderLogic(); renderAlerts(); renderCommunication(); renderTimeline();
+  renderTasks(); renderAnalysisContext(); renderWorkflow(); renderRules(); renderLogic(); renderAlerts(); renderCommunication(); renderTimeline();
 }
 
 function scheduleRender() {
@@ -325,9 +355,11 @@ function addEvent(event) {
     state.events = state.events.filter((item) => !(item.category === "alert" && sameTurn(item) && transient.has(item.detection?.code || item.title)));
   }
   $("#eventCount").textContent = state.events.length; $("#alertCount").textContent = state.alerts.length; $("#currentPhase").textContent = event.phase || "EVENT";
-  if (["COMPLETED", "FAILED", "STOPPED"].includes(event.phase) && (event.source === "monitor" || (event.source === "codex-app-server" && state.running))) {
+  if (["COMPLETED", "FAILED", "STOPPED"].includes(event.phase) && event.source === "monitor" && event.category === "lifecycle" && event.runId) {
     setRunning(false, { COMPLETED:"任务已完成", FAILED:"任务异常结束", STOPPED:"任务已停止" }[event.phase]);
     document.querySelectorAll("[data-simulation]").forEach((button) => { button.disabled = false; });
+    if ($("#terminationDialog").open) $("#terminationDialog").close();
+    pendingTerminationAlert = null;
     const simulationState = $("#simulationState");
     simulationState.className = "simulation-state";
     simulationState.textContent = event.phase === "STOPPED" ? "演练已被真实中断" : `演练已结束：${event.phase}`;
@@ -451,8 +483,18 @@ document.querySelectorAll("[data-simulation]").forEach((button) => button.addEve
   try {
     const result = await postJson("/api/simulation/start", { threadId:state.desktopCurrent.threadId, scenario:button.dataset.simulation }, 20_000);
     state.selectedTaskId = result.threadId;
-    setRunning(true, "真实 Agent 协同演练运行中");
-    simulationState.textContent = `${result.simulation.name} · ${result.simulation.marker}\n已发送到当前窗口“${result.desktop.title}”，正在等待原会话回报 Turn`;
+    // The turn can finish while the POST response is in flight. Confirm the
+    // server's current run before keeping the controls disabled.
+    const status = await fetchJsonWithRetry("/api/status", 2);
+    if (status.running && status.runId === result.runId) {
+      setRunning(true, "真实 Agent 协同演练运行中");
+      simulationState.textContent = `${result.simulation.name} · ${result.simulation.marker}\n已发送到当前窗口“${result.desktop.title}”，正在等待原会话回报 Turn`;
+    } else {
+      setRunning(false, "真实 Agent 协同演练已结束");
+      simulationState.className = "simulation-state";
+      simulationState.textContent = "本次演练已结束，可以再次启动。";
+      document.querySelectorAll("[data-simulation]").forEach((item) => { item.disabled = false; });
+    }
     renderAll();
     document.querySelector('[data-view="workflow"]').click();
   } catch (error) {
@@ -484,5 +526,5 @@ async function refreshDesktopCurrent() {
 }
 refreshDesktopCurrent();
 setInterval(refreshDesktopCurrent, 5000);
-fetchJsonWithRetry("/api/spec").then((spec) => { state.spec = spec; renderSpec(); }).catch(() => { $("#specSummary").textContent = "规范加载失败"; });
+fetchJsonWithRetry("/api/spec").then((spec) => { state.spec = spec; renderSpec(); renderRules(); }).catch(() => { $("#specSummary").textContent = "规范加载失败"; $("#rulesOverview").textContent = "判错规范加载失败"; });
 $("#runtimeMode").textContent = new URLSearchParams(location.search).get("mode") === "desktop" ? "Desktop" : "Web";

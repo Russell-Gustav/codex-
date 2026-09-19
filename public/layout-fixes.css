@@ -58,11 +58,35 @@ details pre { max-height: 320px; overflow: auto; }
 .graph::-webkit-scrollbar-thumb, .detail::-webkit-scrollbar-thumb, details pre::-webkit-scrollbar-thumb { background: #36506d; border: 2px solid #081422; border-radius: 999px; }
 .graph::-webkit-scrollbar-thumb:hover { background: var(--cyan); }
 
+.workflow-verdict, .rules-overview { padding: 12px 14px; margin-bottom: 11px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); color: #c8d7e9; font-size: 12px; line-height: 1.6; }
+.workflow-verdict.warn { border-color: var(--red); background: #321923; color: #ffd6db; }
+.workflow-verdict.clear { border-color: #3b665a; }
+.workflow-legend { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin: 0 0 12px; color: var(--muted); font-size: 11px; }
+.workflow-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend-dot { display: inline-block; width: 12px; height: 12px; border: 2px solid #45607f; border-radius: 3px; background: #12263e; }
+.legend-dot.progress { border-color: var(--green); }
+.legend-dot.evidence { border-color: var(--red); background: #431522; }
+.graph .node.progress:not(.loop) rect { stroke: var(--green); }
+.graph .node.loop rect { fill: #431522; stroke: var(--red); }
+.rules-overview p { margin: 3px 0 8px; }
+.rules-overview p:last-child { margin-bottom: 3px; }
+.rules-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.rule-card { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.rule-card.triggered { border-color: var(--red); background: #261522; }
+.rule-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.rule-head h3 { margin: 0; font-size: 14px; }
+.rule-status { flex: none; color: var(--muted); font-size: 11px; }
+.triggered .rule-status { color: #ff9aa6; font-weight: 700; }
+.rule-card code { display: block; margin-top: 5px; color: var(--cyan); font-size: 10px; }
+.rule-card p { margin: 10px 0 0; color: #bfcede; font-size: 12px; line-height: 1.6; }
+.rule-card small { display: block; margin-top: 10px; color: #ffb3bf; overflow-wrap: anywhere; }
+
 @media (max-width: 1100px) {
   .task-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .spec-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 900px) {
+  .rules-cards { grid-template-columns: 1fr; }
   .task-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .graph { height: 630px; min-height: 630px; max-height: 630px; }
   .event, .logic-item { grid-template-columns: 1fr; }
